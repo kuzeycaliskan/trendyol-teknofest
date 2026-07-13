@@ -13,3 +13,7 @@ __pycache__/
 # loglar
 *.log
 embed.log
+.DS_Store
+.idea/
+ce*_val_pairs.csv
+model_lgbm.txt
