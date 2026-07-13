@@ -1,0 +1,15 @@
+# veri ve büyük dosyalar
+trendyol-e-ticaret-yarismasi-2026-kaggle/
+kaggle_code_*/
+*.npy
+submission*.csv
+pseudo_labels_ce2.csv
+lgbm_v8_on_ceval.npy
+# modeller ve ortam
+e5-small-*/
+model_v*.txt
+.venv/
+__pycache__/
+# loglar
+*.log
+embed.log
