@@ -7,6 +7,7 @@ pseudo_labels_ce2.csv
 lgbm_v8_on_ceval.npy
 # modeller ve ortam
 e5-small-*/
+ce*_model/
 model_v*.txt
 .venv/
 __pycache__/
@@ -17,3 +18,9 @@ embed.log
 .idea/
 ce*_val_pairs.csv
 model_lgbm.txt
+
+# istisna: ce6 test skorları (6.7 MB) — masaüstünde üretildi, Mac'e taşınacak.
+# Yukarıdaki kaggle_code_*/ ve *.npy kurallarını yalnız bu dosya için deler.
+!kaggle_code_6/
+kaggle_code_6/*
+!kaggle_code_6/ce6_test_scores.npy
