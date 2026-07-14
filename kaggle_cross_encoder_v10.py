@@ -1,10 +1,8 @@
 """
-Cross-encoder v9 — masaüstü (RTX 4070), GECE İŞİ: XLM-RoBERTa-large (550M).
-Amaç KOPYA DEĞİL FARKLI SES: mevcut CE'ler birbirine r=0.91-0.96 korelasyonlu
-(aynı aile); large + farklı mimari, karışıma düşük korelasyonlu güç katmalı.
-Ayarlar 12GB VRAM için: batch 16, max_len 128, lr 1e-5 (large modeller yüksek
-lr'de patlar), 1 epoch, tüm veri. Süre: ~6-7 saat.
-İZLEME: ilk 30 dk loss'a bak — NaN/patlama görürsen durdur, haber ver.
+Cross-encoder v10 — masaüstü (RTX 4070), GÜNDÜZ İŞİ: XLM-RoBERTa-base (270M).
+XLM ailesinin HIZLI üyesi (~1.6 saat toplam, 4070 ölçümü) — bugünkü hakka
+yetişir; XLM ailesinin karışıma katkısını large'ın 11 saatlik gecesinden ÖNCE
+ölçer. batch 64, lr 2e-5, 2 epoch, tüm veri.
 
 ce4 reçetesinin (dbmdz, 2 epoch, mined+random negatif) TÜM VERİYLE eğitimi:
 val ayrımı YOK — eşik/ağırlık kararları artık LB'den geldiği için val'in
@@ -40,7 +38,7 @@ from torch.utils.data import DataLoader
 
 SEED = 42
 VAL_TERM_FRACTION = 0.15
-BASE_MODEL = "xlm-roberta-large"
+BASE_MODEL = "xlm-roberta-base"
 MAX_LEN = 128
 ATTR_CHARS = 200  # attributes'ın ilk N karakteri (tokenizer zaten 128 tokene kırpar)
 
@@ -117,10 +115,10 @@ train_examples = [
     InputExample(texts=[q_of[t], t_of[i]], label=float(y))
     for t, i, y in zip(df_tr.term_id, df_tr.item_id, df_tr.label)
 ]
-loader = DataLoader(train_examples, shuffle=True, batch_size=16, drop_last=True)
-model.fit(train_dataloader=loader, epochs=1, warmup_steps=1000,
-          optimizer_params={"lr": 1e-5}, use_amp=True, show_progress_bar=True)
-model.save(f"{OUT}/ce9_model")
+loader = DataLoader(train_examples, shuffle=True, batch_size=64, drop_last=True)
+model.fit(train_dataloader=loader, epochs=2, warmup_steps=1000,
+          optimizer_params={"lr": 2e-5}, use_amp=True, show_progress_bar=True)
+model.save(f"{OUT}/ce10_model")
 
 
 def predict_chunked(pairs_df, chunk=250_000):
@@ -137,5 +135,5 @@ def predict_chunked(pairs_df, chunk=250_000):
 
 
 print("[4/4] Test skorlanıyor (3.36M çift)...")
-np.save(f"{OUT}/ce9_test_scores.npy", predict_chunked(test))
-print("Bitti. İndirilecek TEK dosya: ce9_test_scores.npy")
+np.save(f"{OUT}/ce10_test_scores.npy", predict_chunked(test))
+print("Bitti. İndirilecek TEK dosya: ce10_test_scores.npy")
