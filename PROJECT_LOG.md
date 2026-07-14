@@ -69,10 +69,12 @@ harmanlar, `submission_*.csv` üretir; kullanıcı Kaggle web'den yükler. Yarı
 | w40dual (LGBM=v7+v8 ort.) | | 0.888 (elendi) |
 | **final3** | CE karışımı ce3/ce6/ce5 (.3/.4/.3) + 0.4·LGBM(v8), q=0.28 | **0.890 — GÜNCEL EN İYİ** |
 | final3b (5'li CE) | ce4'ü de ekle | 0.890 (fark yok) |
-| final4 | ce6→(ce6+ce7)/2 takası | **gönderildi, skor bekleniyor** |
+| final4 | ce6→(ce6+ce7)/2 takası | **hazırlandı, GÖNDERİLMEDİ** (bkz. §9) |
 
 CE modelleri: ce5 = ytu-ce-cosmos/turkish-base-bert-uncased (attr 400, len 160, 2ep, LB katkısı çeşitlilik);
-ce6 = dbmdz, TÜM veri (val'siz), 2ep (masaüstünde eğitildi); ce7 = ce6 + zengin girdi (ce6 ile r=0.96).
+ce6 = dbmdz, TÜM veri (val'siz), 2ep (masaüstünde eğitildi, 1s21dk);
+ce7 = ce6 + zengin girdi (attr 400, len 160; 1s42dk) — **ce6'nın kopyası:** r=0.959, Spearman 0.932,
+%96.9 aynı karar (masaüstünde ölçüldü) → ensemble çeşitliliği yok, bkz. §9.
 
 ## 5. Öğrenilen dersler (sırayla, en önemliler)
 
@@ -127,19 +129,39 @@ Repo içindekiler README'de tablo halinde. Repo DIŞI kritik dosyalar (Mac'te pr
 - **Final 2 dosya şablonu:** (1) en iyi karışım @ q=0.28; (2) AYNI karışım @ q=0.26-0.27 (muhafazakâr omuz,
   private öncül-kayması sigortası). İkisi de Kaggle'da elle işaretlenecek — 17 Temmuz'dan önce!
 
-## 9. BUGÜNÜN DURUMU ve açık işler (14 Temmuz akşamı)
+## 9. BUGÜNÜN DURUMU ve açık işler (14 Temmuz öğlen)
 
-**Gönderildi/bekleniyor:** `submission_final4_q28.csv` (ce6+ce7 ort. takası) — skor bekleniyor.
-Sonuç ≥0.890 ise yarının tabanı ce7'li; <0.890 ise final3 tabanı kalır.
+**final4 ASKIDA — gönderilmedi, gönderilmemeli.** Gerekçe (masaüstünde ölçüldü, 14 Tem):
+ce6 ile ce7 **r=0.959 (Pearson), Spearman 0.932, q=0.28 eşiğinde çiftlerin %96.9'unda AYNI karar.**
+`(ce6+ce7)/2` takası bu yüzden ce6'nın kendisinden ayırt edilemez; beklenen fark ±0.001 —
+tam da §8.1'in "hak harcanmaz" bandı. Karar §8'e uygun olarak iptal edildi.
+(Dosya duruyor; ce7 bir gün tek başına takas denenirse o zaman kullanılabilir.)
+
+**Ders:** ce7 (= ce6 + zengin girdi) bir ÇEŞİTLİLİK üyesi değil, ce6'nın kopyası. Aynı seed,
+aynı model, aynı veri, aynı negatifler → tek fark girdi uzunluğu, bu yeterli çeşitlilik üretmiyor.
+§5.7'nin ("aynı aileden yeni model ~+0.001'lik kopya üretir") ölçülmüş kanıtı.
 
 **Şu an çalışanlar:**
 1. **Mac:** LGBM bagging — seed 43-46 ile `PIPE_SEED=$s EMB_PREFIX=embpl TAG=v8s$s python lgbm_pipeline_v3.py`
    döngüsü (loglar `v8s*.log`). Bitince: `test_proba_v8s43..46.npy` + mevcut v8 → 5'li ortalama al,
-   `test_proba_lgbmbag.npy` üret. Karışımda LGBM_v8 yerine dene.
-2. **Masaüstü (gece):** `kaggle_cross_encoder_v9.py` = **XLM-RoBERTa-large** (550M, batch 16, lr 1e-5,
-   1 epoch, tüm veri, ~6-7 saat). İlk 30 dk loss izlenecek (patlarsa durdur). Çıktı: `ce9_test_scores.npy`
-   → pushlanacak. Bu, kalan günlerin EN yüksek beklenen-değerli hamlesi (düşük korelasyonlu güçlü ses;
-   hedef 0.890 → 0.90+).
+   `test_proba_lgbmbag.npy` üret. **BUGÜNKÜ HAKKIN ANA ADAYI** — LGBM karışımdaki tek gerçek
+   çeşitlilik kaynağı (r≈0.79) ve ağırlığı yüksek (w=0.40); bagging onun varyansını düşürür.
+   Yapısal yenilik → §8'e uygun.
+2. **Masaüstü (gece):** `kaggle_cross_encoder_v9.py` = **XLM-RoBERTa-large** (550M, 1 epoch, tüm veri).
+   Stratejik gerekçe sağlam (düşük korelasyonlu güçlü ses; hedef 0.890 → 0.90+), AMA script
+   ÇALIŞTIRILMADAN ÖNCE 3 DÜZELTME ŞART (masaüstü denetimi, 14 Tem):
+   - `predict(batch_size=512)` (satır 133, v6'dan kopya) → **large'da kesin OOM**, üstelik 6 saatlik
+     eğitim BİTTİKTEN sonra patlar. → 64'e indir.
+   - `use_amp=True` (fp16) + large → NaN riski; §5.8 zaten "mDeBERTa fp16 kararsız" diyor.
+     → **bf16** kullan (4070 destekliyor, taşma yok, hız aynı). "İlk 30 dk loss izle" planı
+     gece 3'te uyanmayı gerektirir; gereksiz.
+   - batch 16 sığmayabilir: 550M × (ağırlık 2.2 + gradyan 2.2 + Adam momentleri 4.4) = **8.8 GB,
+     aktivasyonlar daha başlamadan**. (ce6/base 8.3 GB kullanmıştı.) → batch 8 + grad-accum 2.
+   **Önce ~15 dk duman testi** (gerçek batch, birkaç yüz adım): OOM/NaN var mı, gerçek it/s ne
+   → geceye yetişip yetişmeyeceği KESİN bilinir. Süre riski gerçek: eğitim ~6s + large inference
+   ~1.5-2s = sabah 08'i bulur; yarının ana hamlesi buna bağlı, tek deneme hakkı var.
+   **Yedek:** yetişmezse XLM-R-**base** (270M) — aynı mimari çeşitliliği (farklı tokenizer/ön-eğitim)
+   ~2 saatte verir, kesin yetişir. 3 gün kala "kesin yetişir + yeterince farklı" > "güçlü ama riskli".
 
 **Yarın (15 Tem, 5 hak) planı:**
 1. XLM'li karışım (ce9'u CE karışımına ekle; ağırlık başlangıcı ~0.25-0.3, ce9 tekil güçlüyse artır) @ q28
