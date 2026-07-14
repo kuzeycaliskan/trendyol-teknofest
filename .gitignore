@@ -19,8 +19,11 @@ embed.log
 ce*_val_pairs.csv
 model_lgbm.txt
 
-# istisna: ce6 test skorları (6.7 MB) — masaüstünde üretildi, Mac'e taşınacak.
-# Yukarıdaki kaggle_code_*/ ve *.npy kurallarını yalnız bu dosya için deler.
+# istisna: masaüstünde üretilen CE test skorları (~6.7 MB/dosya), Mac'e taşınacak.
+# Yukarıdaki kaggle_code_*/ ve *.npy kurallarını yalnız bu dosyalar için deler.
 !kaggle_code_6/
 kaggle_code_6/*
 !kaggle_code_6/ce6_test_scores.npy
+!kaggle_code_7/
+kaggle_code_7/*
+!kaggle_code_7/ce7_test_scores.npy
