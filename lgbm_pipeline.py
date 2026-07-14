@@ -18,6 +18,7 @@ Metodoloji notları (bilinçli kararlar):
 
 from __future__ import annotations
 
+import os
 import re
 
 import lightgbm as lgb
@@ -27,7 +28,7 @@ from scipy import sparse
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import f1_score, roc_auc_score
 
-SEED = 42
+SEED = int(os.environ.get("PIPE_SEED", "42"))  # bagging için env override
 DATA = "trendyol-e-ticaret-yarismasi-2026-kaggle"
 VAL_TERM_FRACTION = 0.15
 CHUNK = 200_000
