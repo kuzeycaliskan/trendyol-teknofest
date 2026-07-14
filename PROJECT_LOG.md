@@ -69,7 +69,9 @@ harmanlar, `submission_*.csv` üretir; kullanıcı Kaggle web'den yükler. Yarı
 | w40dual (LGBM=v7+v8 ort.) | | 0.888 (elendi) |
 | **final3** | CE karışımı ce3/ce6/ce5 (.3/.4/.3) + 0.4·LGBM(v8), q=0.28 | **0.890 — GÜNCEL EN İYİ** |
 | final3b (5'li CE) | ce4'ü de ekle | 0.890 (fark yok) |
-| final4 | ce6→(ce6+ce7)/2 takası | **hazırlandı, GÖNDERİLMEDİ** (bkz. §9) |
+| final4 | ce6→(ce6+ce7)/2 takası | GÖNDERİLMEDİ (ce6-ce7 r=0.959, ölü) |
+| final5 | LGBM 5'li bagging takası | GÖNDERİLMEDİ (bag-v8 r=0.998, ölü; final dosyalara ölçümsüz dahil edilecek) |
+| final3 q=0.27 | final seçim omuz ölçümü | **BUGÜNÜN SON HAKKI — gönderildi, skor bekleniyor** |
 
 CE modelleri: ce5 = ytu-ce-cosmos/turkish-base-bert-uncased (attr 400, len 160, 2ep, LB katkısı çeşitlilik);
 ce6 = dbmdz, TÜM veri (val'siz), 2ep (masaüstünde eğitildi, 1s21dk);
@@ -169,6 +171,13 @@ aynı model, aynı veri, aynı negatifler → tek fark girdi uzunluğu, bu yeter
 3. En iyi ikisinin birleşimi
 4. `submission_final3_q27.csv` (hazır) — final seçim omuz ölçümü
 5. Yedek (sonuçlara göre)
+
+**KIRMIZI TAKIM KARARI (14 Tem): final 2 dosya yalnız eşik ekseninde AYRIŞAMAZ** — dosya 2, model
+bileşimi farklı bir karışım olmalı (örn. LGBM ağırlığı farklı veya XLM dahil/hariç); aksi halde iki
+dosya aynı model riskini taşır. Ayrıca: Kaggle final işaretleme ELLE yapılır, 17 Tem'den önce;
+eşik hesapları float32'de; ce9/ce10 npy satır hizası submission_pairs ile ayrıca doğrulanacak.
+Yarın (15 Tem) 5 hak: (1) ce10'lu karışım [ön kontrol sonrası], (2) ce9'lu karışım, (3) ikisi birlikte,
+(4) ağırlık iterasyonu, (5) yedek. ce10/ce9 val üretmez → ağırlıklar LB'den, q=0.28 sabit.
 
 **16-17 Tem:** Deney YOK. Final 2 dosyanın üretimi + Kaggle'da işaretlenmesi + finalist olasılığına karşı
 kod/rapor düzeni (bu doküman + README güncel tutulacak). Kaggle'da final seçimi yapmayı UNUTMA.
