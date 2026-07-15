@@ -172,6 +172,13 @@ aynı model, aynı veri, aynı negatifler → tek fark girdi uzunluğu, bu yeter
 4. `submission_final3_q27.csv` (hazır) — final seçim omuz ölçümü
 5. Yedek (sonuçlara göre)
 
+**15 TEM SONUÇ — XLM HATTI KAPANDI:** final7_l30 (large %30) LB 0.886; final6_x25 (base %25) LB 0.887.
+İki ölçüm de zarar bandında → XLM ailesi bu problemde yerli Türkçe BERT'lerin gerisinde (muhtemel:
+çok-dilli tokenizer dezavantajı + large'ın tek epoch'u). Kalan 3 hak bilinçli BOŞ bırakıldı (denetim
+kuralı: 0.890'ı geçme ihtimali olan ölçüm kalmadı; boş hak > gürültü ölçümü). **FİNAL 2 DOSYA KESİNLEŞTİ:**
+Dosya 1 = `submission_final3_q28.csv` (LB 0.890), Dosya 2 = `submission_final3_q27.csv` (LB 0.890,
+eşik sigortası). İkisi de ölçülmüş. 16-17 Tem: Kaggle'da ELLE işaretle + rapor düzeni. Deney YOK.
+
 **KIRMIZI TAKIM KARARI (14 Tem): final 2 dosya yalnız eşik ekseninde AYRIŞAMAZ** — dosya 2, model
 bileşimi farklı bir karışım olmalı (örn. LGBM ağırlığı farklı veya XLM dahil/hariç); aksi halde iki
 dosya aynı model riskini taşır. Ayrıca: Kaggle final işaretleme ELLE yapılır, 17 Tem'den önce;
