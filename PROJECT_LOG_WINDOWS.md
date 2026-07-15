@@ -7,6 +7,18 @@
 
 ---
 
+## 0. TAMAMLANDI — v9 (XLM-R-large) skorları hazır (15 Tem, güncelleme)
+
+v9 gece koşusu **bitti** (PC sonrasında kapanmış, işi bozmadı). Eğitim + inference eksiksiz:
+- `ce9_model/model.safetensors` (2.24 GB) kaydedildi — 14 Tem 23:04.
+- `ce9_test_scores.npy` yazıldı — 15 Tem 00:32 (script'in son adımı `[4/4]`).
+- Doğrulama: shape `(3359679,)` = submission satır sayısıyla **birebir**; NaN **0/3.36M**;
+  aralık 0.0004–0.998. fp16 large patlamadı, temiz.
+- **Harman için hazır:** `kaggle_code_9/ce9_test_scores.npy` (push edildi). Mac tarafı alabilir.
+  v9'un amacı düşük-korelasyonlu "farklı ses" katmaktı; korelasyon ölçümü Mac'te yapılacak.
+
+---
+
 ## 1. ÖLÇÜLDÜ — ce6 ve ce7 aynı model (final4'ü öldüren bulgu)
 
 3.36M test skoru üzerinden, iki `.npy` elde tutularak hesaplandı:

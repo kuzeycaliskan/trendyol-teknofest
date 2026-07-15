@@ -28,6 +28,10 @@ kaggle_code_6/*
 kaggle_code_7/*
 !kaggle_code_7/ce7_test_scores.npy
 
+!kaggle_code_9/
+kaggle_code_9/*
+!kaggle_code_9/ce9_test_scores.npy
+
 !kaggle_code_10/
 kaggle_code_10/*
 !kaggle_code_10/ce10_test_scores.npy
