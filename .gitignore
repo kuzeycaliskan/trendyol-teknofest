@@ -43,3 +43,7 @@ kaggle_code_11/*
 !kaggle_code_12/
 kaggle_code_12/*
 !kaggle_code_12/ce12_test_scores.npy
+
+!kaggle_code_13/
+kaggle_code_13/*
+!kaggle_code_13/ce13_test_scores.npy
