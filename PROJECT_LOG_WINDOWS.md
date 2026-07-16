@@ -2,8 +2,77 @@
 
 > Bu doküman masaüstü oturumundan Mac oturumuna devirdir. **Nihai kararı Mac verir**
 > (LB geçmişi ve harman kodu orada). Burada iki şey ayrı tutuldu:
-> **§1-2 ÖLÇÜLDÜ** (tartışılmaz, sayılar), **§3-4 KANAAT** (tartışılır, Mac reddedebilir).
+> **§0-BIS, §1-2 ÖLÇÜLDÜ** (tartışılmaz, sayılar), **§3-4 KANAAT** (tartışılır, Mac reddedebilir).
 > Tarih: 14 Temmuz 2026, 12:30. Donanım: RTX 4070 12 GB, i7-13700KF, 32 GB.
+>
+> **EN SON (17 Tem 00:15): §0-BIS — hakem doğrulaması NO-GO (isabet 0.535 < 0.62).
+> Hakem hattı kapandı, 0.893 mühürlensin. Mac'in beklediği cevap orada.**
+
+---
+
+## 0-BIS. ÖLÇÜLDÜ — HAKEM NO-GO (17 Tem, 00:15) → **0.893 MÜHÜRLENSİN**
+
+**Mac'in beklediği cevap: HAKEM İSABETİ = 0.535 → `<0.62` → GÖNDERME.**
+`desktop_llm_judge_val.py` + `judge_val.csv` (6000 dengeli zor çift, 3000/3000) masaüstünde
+koşturuldu (~4 dk, Qwen2.5-3B-Instruct, fp16, batch 128). Karar kuralı Mac'in kendi
+eşiklerinden: `≥0.70 katmaya değer | <0.62 gönderme`.
+
+### Sayılar
+
+| Ölçüm | Değer | Yorum |
+|---|---|---|
+| **Script'in raporu** (eşik taraması 0.30–0.70) | **0.535** | No-go bandının çok altında |
+| Her-şeye-"Hayır" taban çizgisi | 0.500 | Script'in skoru buna neredeyse eşit |
+| **AUC** (eşikten BAĞIMSIZ sıralama gücü) | **0.721** | Hakemde **sinyal var** |
+| **Tam eşik taramasıyla en iyi isabet** | **0.665** @ eşik **0.0067** | Yine de <0.70 |
+| Skor dağılımı | medyan **0.012**, p95 0.348, p99 0.555 | `>0.5` oranı yalnız **%1.7** |
+| Pozitif ort. / negatif ort. skor | 0.098 / 0.038 | Ayrım var ama sıfıra ezilmiş |
+
+### Önemli nüans (Mac bunu bilmeli — rapor için de geçerli)
+
+**Hakem çöp değil; hakem KALİBRASYONSUZ ve yetersiz.** AUC 0.721, yazı-turadan (0.5) belirgin
+iyi: Qwen alakalı çiftlere alakasızlardan sistematik olarak yüksek skor veriyor. Sorun şu ki
+"Evet" demeyi neredeyse hiç seçmiyor — tüm ayrım **0.007 civarında** oluyor, 0.5'in yanında değil.
+Bu yüzden **script'in dar taraması (0.30–0.70) bulguyu neredeyse gizliyordu**: 0.535 raporluyor,
+hakemin gerçek ayrım gücü 0.665. Dengeli sette her şeye "Hayır" demek zaten 0.500 eder —
+yani 0.535, "hakem hiçbir şey yapmıyor"dan ayırt edilemez. Ölçümü eşikten bağımsız (AUC) da
+yapmak şarttı.
+
+### Karar NEDEN yine de NO-GO (nüansa rağmen)
+
+1. **En iyi eşikle bile 0.665 < 0.70** — katmaya-değer çıtasının altında.
+2. Bu 0.665 **iyimser taraf**: hakemin KENDİ en iyi eşiğiyle, BİLİNEN etiketlerde alındı.
+   Bandımız zaten CE'nin kararsız kaldığı yer; oraya 0.665'lik ses katmak 0.893'e gürültü ekler.
+3. Eşiği (0.0067) bu 6000 çiftten seçmek **PROJECT_LOG §5.6'nın tam olarak yasakladığı şey**
+   ("eşik yerelden seçilemez"). LB'den haritalamak hak ister; §8: "farkı ≤0.002 varyanta hak
+   harcanmaz". Hak harcamadan kalibre edilemez → kullanılamaz.
+
+### Kod doğruydu — iki hipotez ölçümle ÇÜRÜTÜLDÜ (dürüstlük için)
+
+Ext koşusundaki %0.5 "Evet" oranını önce bug sandım; ikisi de yanlış çıktı:
+- ❌ "token id'leri bozuk, `ids_of()` Hayır'ı yanlış yakalıyor" → **değil**. Çözüldü:
+  `36='E'`, `10424=' Ev'`, `56464='Hay'`, `17798=' Hay'` — doğru ilk token'lar, çakışma yok.
+- ❌ "`max_length=256` prompt'u kesiyor, `<|im_start|>assistant` uçuyor" → **kesmiyor**.
+  Prompt'lar medyan 97, max 163 token; kesilen oran **0.0000**.
+- ✅ Sonuç: skorlama çekirdeği mekanik olarak doğru. %0.5, Qwen-3B'nin bu banttaki gerçek
+  (kalibrasyonsuz) kanaati. `val`/`core`/`ext` üçü de **aynı** çekirdeği kullanıyor
+  (aynı model, prompt, token id, `logits[:, -1, :]`) → doğrulama ext'in yolunu birebir ölçer,
+  sonuç doğrudan transfer eder.
+
+### Yapılanlar / yapılmayanlar
+
+- `llm_val_scores.npy` + `llm_val_labels.npy` yazıldı (6000/6000, diskte).
+- **Ext koşusu (216k) YENİDEN BAŞLATILMADI.** Gece konsol kapanınca 150144/216249'da (%69)
+  ölmüştü; checkpoint'ler sağlam ve script resume destekli, ama çıktının gideceği yer kalmadı
+  → kalan ~66k için 3.5 saat GPU yakmanın beklenen değeri **sıfır**. İstenirse devam ettirilebilir.
+- **Hakem hattı KAPANDI.** Fotoğraftaki mantık tam işledi: **tek submission harcamadan**
+  hakemin yetmediğini öğrendik.
+
+### Mac'e: plan değişmiyor
+
+**Final çift aynen mühürlensin** — `submission_final11_duo_q28.csv` (0.893) +
+`submission_final3_q27.csv` (0.890). **17 Tem'de Kaggle'da ELLE işaretle** (PROJECT_LOG §8/§9
+üç ayrı yerde uyarıyor; işaretlenmezse Kaggle en iyi public'i seçer → q27 eşik sigortası kaybolur).
 
 ---
 
