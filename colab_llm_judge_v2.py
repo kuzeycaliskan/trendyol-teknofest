@@ -6,6 +6,8 @@ Colab'da vLLM CUDA-13/12 çatışması verdi; bu sürüm önyüklü transformers
 logit'lerinden P(Evet | Evet∪Hayır). Chunk başına diske kayıt (kesinti-güvenli).
 
 Kullanım: T4 runtime + uncertain_core.csv sol panelde → bu hücreyi çalıştır.
+İlk çalıştırmada Drive izni ister (hesabını seç, onayla). Çıktılar
+Drive/trendyol/ klasörüne yazılır — oturum ölse bile durur.
 İlk '5000/...' satırının süresi hız testidir: ≤2 dk ise toplam ~1 saat.
 """
 
@@ -15,6 +17,12 @@ import numpy as np
 import pandas as pd
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
+
+# Çıktılar Drive'a: oturum ölse de dosyalar kalır, checkpoint devam eder
+from google.colab import drive
+drive.mount("/content/drive")
+OUT = "/content/drive/MyDrive/trendyol"
+os.makedirs(OUT, exist_ok=True)
 
 MODEL = "Qwen/Qwen2.5-3B-Instruct"
 CSV = "uncertain_core.csv"
@@ -48,9 +56,9 @@ def make_prompt(q, t):
 
 prompts = [make_prompt(q, t) for q, t in zip(df["query"], df["item_text"])]
 
-if os.path.exists("llm_core_scores.npy"):
-    scores = np.load("llm_core_scores.npy")
-    done = int(np.load("llm_core_done.npy"))
+if os.path.exists(f"{OUT}/llm_core_scores.npy"):
+    scores = np.load(f"{OUT}/llm_core_scores.npy")
+    done = int(np.load(f"{OUT}/llm_core_done.npy"))
     print(f"devam: {done} hazır")
 else:
     scores = np.full(len(df), 0.5, dtype=np.float32)
@@ -67,13 +75,13 @@ with torch.inference_mode():
         p_no = py[:, no_ids].sum(dim=1)
         scores[s:s + len(batch)] = (p_yes / (p_yes + p_no + 1e-9)).float().cpu().numpy()
         if (s - done) % SAVE_EVERY < BATCH:
-            np.save("llm_core_scores.npy", scores)
-            np.save("llm_core_done.npy", np.array(s + len(batch)))
-            np.save("llm_core_rows.npy", df.row_idx.to_numpy())
+            np.save(f"{OUT}/llm_core_scores.npy", scores)
+            np.save(f"{OUT}/llm_core_done.npy", np.array(s + len(batch)))
+            np.save(f"{OUT}/llm_core_rows.npy", df.row_idx.to_numpy())
             print(f"{s + len(batch)}/{len(prompts)} — kaydedildi")
 
-np.save("llm_core_scores.npy", scores)
-np.save("llm_core_done.npy", np.array(len(prompts)))
-np.save("llm_core_rows.npy", df.row_idx.to_numpy())
+np.save(f"{OUT}/llm_core_scores.npy", scores)
+np.save(f"{OUT}/llm_core_done.npy", np.array(len(prompts)))
+np.save(f"{OUT}/llm_core_rows.npy", df.row_idx.to_numpy())
 print("Bitti. İndir: llm_core_scores.npy, llm_core_rows.npy")
 print("Evet oranı (>0.5):", round(float((scores > 0.5).mean()), 3))
