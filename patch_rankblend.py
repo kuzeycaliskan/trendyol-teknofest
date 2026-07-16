@@ -6,9 +6,17 @@ muhtemelen ~0.55-0.63. Bu yüzden ham skoru DEĞİL, yalnız hakemin EN EMİN
 olduğu uçları kullanıyoruz: judge-rank üst %EDGE → yukarı it, alt %EDGE →
 aşağı it, belirsiz ortaya (düşük-AUC) DOKUNMA. Bandın dışına dokunmuyoruz, q=0.28.
 
-Kullanım: patch_rankblend.py <w> [edge_frac]   (varsayılan w=0.3, edge=0.15)
-Girdi: llm_core_scores.npy, llm_core_rows.npy
+Kullanım: patch_rankblend.py <w> [edge_frac] [band]
+          (varsayılan w=0.3, edge=0.15, band=tight)
+Girdi: llm_<band>_scores.npy, llm_<band>_rows.npy
+       band=tight -> fast_judge.py çıktısı (1.5B, 66k dar bant)  [BUGÜNKÜ]
+       band=core  -> desktop_llm_judge_core.py çıktısı (3B, 170k)
 Çıktı: submission_rank_w<pct>.csv
+
+NOT (masaüstü, 17 Tem): fast_judge.py çıktıyı llm_tight_* yazıyor ama bu yama
+llm_core_* okuyordu -> girdi parametreleştirildi, varsayılan tight. 3B core
+koşusu 5248/170574'te durduruldu (ETA 4 saat, dar banda geçildi); o yarım
+checkpoint .stale/ altında -- kullanılmamalı.
 """
 import sys
 
@@ -17,11 +25,13 @@ import pandas as pd
 
 W = float(sys.argv[1]) if len(sys.argv) > 1 else 0.3
 EDGE = float(sys.argv[2]) if len(sys.argv) > 2 else 0.15
+# hangi hakem çıktısı: "tight" (1.5B, 66k dar bant) | "core" (3B, 170k)
+BAND = sys.argv[3] if len(sys.argv) > 3 else "tight"
 DATA = "trendyol-e-ticaret-yarismasi-2026-kaggle"
 
 p = np.load("test_proba_final11.npy").astype(np.float32).copy()
-j = np.load("llm_core_scores.npy").astype(np.float32)
-rows = np.load("llm_core_rows.npy")
+j = np.load(f"llm_{BAND}_scores.npy").astype(np.float32)
+rows = np.load(f"llm_{BAND}_rows.npy")
 scored = j != 0.5
 r = rows[scored]
 rank = pd.Series(j[scored]).rank(pct=True).to_numpy(dtype=np.float32)
