@@ -1,5 +1,11 @@
 # Trendyol Datathon 2026 — Proje Günlüğü ve Devir Dokümanı
 
+> **KAPANIŞ (16 Tem):** Zirve LB 0.893 (final11 = 0.6·[0.7·(0.3ce3+0.4ce6+0.3ce5) + 0.3·(ce11+ce12)/2] + 0.4·v9L, q=0.28).
+> Son denemeler: v9L (komşu-graf LGBM) +0.001; ce11 (sameleaf çelişki) yarı dozda nötr, ce12 (ConvBERT) ile çift olarak +0.002;
+> ce13 (max-config) nötr; per-term rank hibriti −0.060 (heterojenlik GERÇEK, global eşik doğru);
+> ce14 (tam-liste negatif) EĞİTİLMEDEN İPTAL — kirlilik ölçümü %15-20 false-negative gösterdi (taban-oranı aritmetiği).
+> **FİNAL ÇİFT: submission_final11_duo_q28.csv (0.893) + submission_final3_q27.csv (0.890) — 17 Tem'de Kaggle'da ELLE işaretlenecek.**
+
 > Bu doküman, başka bir Claude oturumunun (veya bir insanın) projeyi sıfır bağlamla
 > devralabilmesi için yazıldı. Son güncelleme: 14 Temmuz 2026 (yarışmanın bitimine 3 gün).
 
