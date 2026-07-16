@@ -28,7 +28,7 @@ from transformers import (AutoModelForCausalLM, AutoTokenizer, Trainer,
 SEED = 42
 DATA = "trendyol-e-ticaret-yarismasi-2026-kaggle"
 MODEL = "Qwen/Qwen2.5-1.5B-Instruct"
-MAXLEN = 128
+MAXLEN = 160          # attributes'lı item_text + sameleaf çelişkileri için
 CKPT = "lora_judge_ckpt"
 rng = np.random.default_rng(SEED)
 torch.manual_seed(SEED)
@@ -36,19 +36,22 @@ torch.manual_seed(SEED)
 # ---------------------------------------------------------------- veri
 terms = pd.read_csv(f"{DATA}/terms.csv")
 items = pd.read_csv(f"{DATA}/items.csv",
-                    usecols=["item_id", "title", "category", "brand"]).fillna("")
+                    usecols=["item_id", "title", "category", "brand", "attributes"]).fillna("")
 q_of = dict(zip(terms.term_id, terms["query"].astype(str)))
+# item_text CSV'lerle BİREBİR aynı format (attributes dahil — kritik tutarlılık)
 items["text"] = (items.title.str.slice(0, 90) + " | "
-                 + items.category.str.split("/").str[-1] + " | " + items.brand)
+                 + items.category.str.split("/").str[-1] + " | " + items.brand
+                 + " | " + items.attributes.str.slice(0, 60))
 t_of = dict(zip(items.item_id, items.text))
 
-pos = pd.read_csv(f"{DATA}/training_pairs.csv").sample(60_000, random_state=SEED)
+# 50/50 denge (90k poz / 90k neg) — sıralama kalitesi için
+pos = pd.read_csv(f"{DATA}/training_pairs.csv").sample(90_000, random_state=SEED)
 pos = pos[["term_id", "item_id"]].assign(y="Evet")
-mined = pd.read_csv("mined_hard_negatives.csv").sample(40_000, random_state=SEED)[["term_id", "item_id"]]
+mined = pd.read_csv("mined_hard_negatives.csv").sample(45_000, random_state=SEED)[["term_id", "item_id"]]
 same = pd.read_csv("sameleaf_negatives.csv")
-same = same.sample(min(40_000, len(same)), random_state=SEED)[["term_id", "item_id"]]
-ri = items.item_id.sample(20_000, replace=True, random_state=SEED).to_numpy()
-rt = terms.term_id.sample(20_000, replace=True, random_state=SEED).to_numpy()
+same = same.sample(min(30_000, len(same)), random_state=SEED)[["term_id", "item_id"]]
+ri = items.item_id.sample(15_000, replace=True, random_state=SEED).to_numpy()
+rt = terms.term_id.sample(15_000, replace=True, random_state=SEED).to_numpy()
 rand = pd.DataFrame({"term_id": rt, "item_id": ri})
 neg = pd.concat([mined, same, rand], ignore_index=True).assign(y="Hayır")
 df = pd.concat([pos, neg], ignore_index=True).sample(frac=1, random_state=SEED)
@@ -109,6 +112,10 @@ print(f"eğitim başlıyor (resume={resume})...")
 trainer.train(resume_from_checkpoint=resume)
 model = model.merge_and_unload()
 model.eval()
+# 🔴 KRİTİK: inference'te SOL padding — score() son pozisyonu (logits[:,-1]) okuyor;
+# sağ-padding'de o pozisyon PAD olur ve skorlar çöp çıkar. Eğitim manuel collate
+# ile sağ-pad kullandı (doğru), yalnız çıkarım sol-pad olmalı.
+tok.padding_side = "left"
 
 # ---------------------------------------------------------------- skorlama yardımcısı
 yes_ids = list({tok.encode(w, add_special_tokens=False)[0] for w in ("Evet", " Evet")})
@@ -137,12 +144,23 @@ def score(queries, texts, tag, save_scores, save_rows, rows, BATCH=128):
 
 # ---------------------------------------------------------------- 1) DOĞRULAMA (go/no-go)
 val = pd.read_csv("judge_val.csv")
+lab = val["label"].to_numpy()
 vs = score(val["query"], val["item_text"], "val", "llm_ft_val_scores.npy",
-           "llm_ft_val_labels.npy", val["label"].to_numpy())
-best = max(((vs >= thr).astype(int) == val["label"].to_numpy()).mean()
-           for thr in np.arange(0.3, 0.71, 0.05))
-print(f"\n=== FINE-TUNED HAKEM İSABETİ (zor çiftler): {best:.3f} ===")
-print(">=0.72 çok iyi, banda kat; 0.65-0.72 iyi; <0.62 ise 0.893'ü mühürle.\n")
+           "llm_ft_val_labels.npy", lab)
+# en iyi tek eşik (genel), sonra alt-küme bazlı isabet
+thr_star = max(np.arange(0.3, 0.71, 0.05),
+               key=lambda t: ((vs >= t).astype(int) == lab).mean())
+overall = ((vs >= thr_star).astype(int) == lab).mean()
+print(f"\n=== FINE-TUNED HAKEM İSABETİ (eşik {thr_star:.2f}): genel {overall:.3f} ===")
+if "src" in val.columns:
+    src = val["src"].to_numpy()
+    for s in ("pos", "sameleaf", "mined"):
+        m = src == s
+        if m.any():
+            acc = ((vs[m] >= thr_star).astype(int) == lab[m]).mean()
+            print(f"    {s:9s}: {acc:.3f} ({int(m.sum())} çift)")
+    print("    >>> KARAR: sameleaf isabeti banda en yakın sinyaldir.")
+print(">=0.75 gönder | 0.68-0.75 tek atış | <0.68 mühürle (0.893 cepte).\n")
 
 # ---------------------------------------------------------------- 2) BANDI SKORLA (harman için)
 try:
