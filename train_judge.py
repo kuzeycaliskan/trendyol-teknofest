@@ -100,7 +100,7 @@ model = get_peft_model(model, LoraConfig(
     target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]))
 model.print_trainable_parameters()
 
-args = TrainingArguments(output_dir=CKPT, max_steps=4000, per_device_train_batch_size=8,  # son gün: adım-sınırlı (~2.5s)
+args = TrainingArguments(output_dir=CKPT, max_steps=5000, per_device_train_batch_size=8,  # denetim: tam cosine anneal (~3.1s)
                          gradient_accumulation_steps=2, learning_rate=lr, warmup_steps=200,
                          lr_scheduler_type="cosine", logging_steps=50, save_steps=250,
                          save_total_limit=2, bf16=True, report_to=[], seed=SEED)
