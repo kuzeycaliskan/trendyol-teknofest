@@ -47,3 +47,8 @@ kaggle_code_12/*
 !kaggle_code_13/
 kaggle_code_13/*
 !kaggle_code_13/ce13_test_scores.npy
+
+arsiv/ara_ciktilar/
+arsiv/kaggle_ciktilar/
+arsiv/__pycache__/
+arsiv/checkpoints/
