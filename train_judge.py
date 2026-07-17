@@ -100,9 +100,9 @@ model = get_peft_model(model, LoraConfig(
     target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]))
 model.print_trainable_parameters()
 
-args = TrainingArguments(output_dir=CKPT, num_train_epochs=1, per_device_train_batch_size=8,
+args = TrainingArguments(output_dir=CKPT, max_steps=4000, per_device_train_batch_size=8,  # son gün: adım-sınırlı (~2.5s)
                          gradient_accumulation_steps=2, learning_rate=lr, warmup_steps=200,
-                         lr_scheduler_type="cosine", logging_steps=50, save_steps=500,
+                         lr_scheduler_type="cosine", logging_steps=50, save_steps=250,
                          save_total_limit=2, bf16=True, report_to=[], seed=SEED)
 trainer = Trainer(model=model, args=args, train_dataset=DS(), data_collator=collate)
 resume = os.path.isdir(CKPT) and any(d.startswith("checkpoint") for d in os.listdir(CKPT))
