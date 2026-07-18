@@ -1,6 +1,7 @@
 # NİHAİ SONUÇ — 17 Tem 2026
 
-## Kaggle public LB: 0.903 (başlangıç 0.697, +0.206)
+## Kaggle public LB: 0.903 | Private LB: 68. / 364 takım (başlangıç 0.697, +0.206)
+## İlk 20'ye girilemedi; finalist değiliz. Post-mortem: README.md "Öğrenilen ders".
 
 ## FINAL İŞARETLENECEK 2 DOSYA (Kaggle Submissions -> checkbox):
 1. submission_7b_w50.csv          -> 0.903  (EN İYİ: 7B rank-blend w=0.5, q=0.28)

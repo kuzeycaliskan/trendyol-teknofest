@@ -1,49 +1,79 @@
 # Trendyol Datathon 2026 — Arama Alaka Modeli
 
-(Sorgu, ürün) çiftleri için binary relevance tahmini. Metrik: macro-F1.
-Güncel LB: **0.889** (dörtlü cross-encoder ensemble + %40 LightGBM, q=0.28).
+TEKNOFEST 2026 E-Ticaret Yarışması (Kaggle aşaması, 26 Haziran – 17 Temmuz 2026).
+Görev: bir (arama terimi, ürün) çifti için ürünün terimle **alakalı (1)** veya
+**alakasız (0)** olduğunu tahmin eden binary model. Metrik: **macro-F1**.
+Eğitim verisi yalnızca pozitif çiftler içerir; negatifler yarışmacı tarafından üretilir.
 
-## Masaüstünde ce6 eğitimi (öncelikli iş)
+## Sonuç
 
-Kurulum: `SETUP_WINDOWS.md` (Python 3.12, CUDA'lı PyTorch, veri indirme).
-`mined_hard_negatives.csv` bu repoda hazır; yarışma CSV'leri Kaggle'dan indirilir.
-
-```powershell
-cd C:\trendyol
-.\venv\Scripts\Activate.ps1
-python kaggle_cross_encoder_v6.py
-```
-
-Süre (RTX 4070): ~2.5-3 saat. Çıktı: `ce6_test_scores.npy` → Mac'e taşınacak.
-
-## Dosya haritası
-
-| Dosya | Ne |
+| | |
 |---|---|
-| `baseline.py` | Seviye 1: kelime örtüşmesi (LB 0.697) |
-| `lgbm_pipeline.py` | Seviye 2: 16 öznitelik + LightGBM (LB 0.746); ortak yardımcılar |
-| `lgbm_pipeline_v3.py` | Seviye 3+: + embedding kosinüsü; EMB_PREFIX/TAG env ile parametrik (v5/v6/v7/v8 bununla eğitildi) |
-| `lgbm_pipeline_v4.py` | KULLANILMIYOR — rank öznitelikleri LB'de battı, ders kaydı |
-| `embed_texts.py` | Sorgu+ürün embeddingleri (argv: model, çıktı öneki) |
-| `finetune_biencoder.py` | Bi-encoder MNRL fine-tune (argv: taban, çıktı, epoch) |
-| `finetune_pseudo.py` | Pseudo-label MNRL turu (nötr çıktı, kapatıldı) |
-| `mine_hard_negatives.py` | Embedding'le zor negatif madenciliği (leaf-kategori korumalı) |
-| `mined_hard_negatives.csv` | Madencilik çıktısı: 176k zor negatif — CE eğitimlerinin girdisi |
-| `kaggle_cross_encoder.py` | CE v1: distilbert (LB 0.799, sentetik negatif dersi) |
-| `kaggle_cross_encoder_v2.py` | CE v2: dbmdz Türkçe BERT + mined (LB 0.856) |
-| `kaggle_cross_encoder_v3.py` | CE v3: + pseudo etiketler (nötr) |
-| `kaggle_cross_encoder_v4.py` | CE v4: v2 + 2 epoch |
-| `kaggle_cross_encoder_v5.py` | CE v5: cosmos Türkçe BERT, zengin girdi |
-| `kaggle_cross_encoder_v6.py` | **CE v6: endgame — tüm veri, val'siz, 2 epoch (masaüstünde koşulacak)** |
-| `blend_ce.py` | LGBM + CE ağırlıklı harman + eşik kalibrasyonu |
-| `SETUP_WINDOWS.md` | Masaüstü kurulum rehberi |
+| **Public LB** | **0.903** |
+| **Private LB / sıra** | **68. / 364 takım** |
+| Başlangıç (baseline) | 0.697 |
+| Toplam iyileşme | **+0.206** |
+| Benchmark Level 4 (0.900) | aşıldı |
 
-## Metodoloji özeti
+İlk ML yarışması; ML'e bu projeyle başlandı.
 
-- Terim bazlı train/val ayrımı (test terimleri trainde yok — %0 örtüşme)
-- Negatifler: rastgele + embedding-madenciliği (leaf-kategori false-negative koruması)
-- Eşik (q) ve LGBM ağırlığı (w) LB'den kalibre: q eğrisi tepesi 0.28, w tepesi ≥0.4 (aranıyor)
-- Sentetik validasyon doygun (0.92 bandı) — küçük farklar için pusula LB
-- Final seçim: 1 dosya tepede (q=0.28), 1 dosya muhafazakâr (q=0.26)
+## Nihai çözüm (iki final submission)
 
-> Not: Bu repo yarışma süresince PRIVATE kalmalı (kod paylaşımı kurallara aykırı).
+Kaggle'da işaretlenen 2 submission — tam reçeteleri ayrı dokümanlarda:
+
+1. **`submission_7b_w50.csv` → 0.903** — bkz. [`FINAL_1_submission_7b_w50.md`](FINAL_1_submission_7b_w50.md)
+   5 Türkçe cross-encoder + komşu-graf öznitelikli LightGBM topluluğu, üzerine
+   **zero-shot Qwen2.5-7B** yargıcın kararsız-bant sıralaması rank-blend (w=0.5), q=0.28.
+2. **`submission_final11_duo_q28.csv` → 0.893** — bkz. [`FINAL_2_submission_final11_duo.md`](FINAL_2_submission_final11_duo.md)
+   Aynı topluluk, LLM yargıç YOK (temiz sigorta; farklı model ekseni).
+
+İkinci-aşama tekrarüretilebilirlik & kural uyumu: [`STAGE2_REPRODUCIBILITY.md`](STAGE2_REPRODUCIBILITY.md).
+Tam günlük: [`PROJECT_LOG.md`](PROJECT_LOG.md) · Skor özeti: [`FINAL_RESULT.md`](FINAL_RESULT.md).
+
+## Yaklaşım — skor merdiveni
+
+| Aşama | Yöntem | LB |
+|---|---|---|
+| Baseline | Sorgu kelimelerinin ürün metninde geçme oranı (coverage) | 0.697 |
+| Seviye 2 | 16 öznitelik + LightGBM; sentetik negatif (rastgele + kategori-zor) | 0.746 |
+| Seviye 3 | + çok dilli embedding (multilingual-e5) kosinüsü | 0.767 |
+| Fine-tune | e5-small bi-encoder MNRL fine-tune (in-batch negatives) | 0.813 |
+| Cross-encoder | Türkçe BERT (dbmdz) + **embedding-madenciliği zor negatifler** | 0.856 |
+| Kalibrasyon | Eşik (q) ve ağırlık (w) LB'den haritalandı; q=0.28, w=0.40 | 0.889 |
+| Topluluk | 5 CE (dbmdz/cosmos/convbert) + komşu-graf LightGBM | 0.893 |
+| **LLM yargıç** | **zero-shot Qwen2.5-7B rank-blend** (kararsız bant) | **0.903** |
+
+## Pipeline dosyaları (kök dizin)
+
+**Veri hazırlığı:** `mine_hard_negatives.py` (embedding zor negatif, leaf-koruma),
+`mine_sameleaf_negatives.py` (aynı-leaf sorgu-çelişki negatifi), `finetune_biencoder.py`,
+`embed_texts.py`.
+**Cross-encoder eğitimi:** `kaggle_cross_encoder_v{2,3,5,6,11,12}.py`.
+**LLM yargıç:** `kaggle_llm_judge.py` (Qwen2.5-7B-AWQ, vLLM, self-host).
+**LightGBM + topluluk:** `lgbm_pipeline.py`, `lgbm_pipeline_v3.py`, `lgbm_v9L.py`, `blend_ce.py`.
+**Arşiv:** `arsiv/` — tüm ölü denemeler ve ara çıktılar (silinmedi, geri alınabilir).
+
+## Metodoloji ilkeleri
+
+- **Sızıntı yok:** train/val ayrımı hep terim (term_id) bazlı; test terimleri trainde %0
+  görülüyor, validasyon bunu taklit eder. Ön-işleme yalnız etiketsiz veriyle fit edilir.
+- **Ölçmeden gitme:** her yapısal fikir ölçümle sınandı; başarısızlar ucuza elendi —
+  XLM ailesi, pseudo-labeling, grup-içi rank öznitelikleri, LightGBM bagging,
+  per-term normalizasyon, tam-liste retrieval negatifleri (hepsi ölçümle reddedildi).
+- **LB-overfit kontrolü:** yalnız global parametreler (q, w) LB'den kalibre edildi
+  (tek-parametre, pürüzsüz eğri); çok sayıda mikro-karar LB'den öğrenilmedi.
+- **Sabit seed (42); tüm ara ürünler script'lerle yeniden üretilebilir.**
+
+## Öğrenilen ders (post-mortem)
+
+En pahalı ders: **yarışmanın tam kural/kısıt uzayı (hangi modeller serbest, donanım
+sınırı, ne skorlanıyor) veriye dokunmadan ÖNCE netleştirilmeli.** Açık kaynak
+LLM'lerin tahminde serbest olduğunu (SSS) geç öğrendik; 7B yargıç yalnız son gün
+devreye girdi ve +0.010 getirdi. Erken bilinseydi *fine-tuned büyük LLM yargıç*
+(üst takımların reçetesi) haftalarca olgunlaştırılıp ilk-20 (~0.92) realistik
+hedeflenebilirdi. Reçete artık hazır — bir sonraki yarışmada ilk günden başlangıç noktası.
+
+## Donanım
+
+MacBook Pro M4 Pro (veri/LightGBM/harman) + Windows RTX 4070 (CUDA, CE eğitimi) +
+Kaggle T4 (7B yargıç, vLLM). Python 3.12/3.14.
